@@ -14,6 +14,16 @@ final class AppModel: ObservableObject {
     @Published var hasPermission = AXIsProcessTrusted()
     @Published var errorMessage: String?
     @Published var notice: String?
+    @Published var language: AppLanguage {
+        didSet {
+            Localizer.select(language)
+            defaults.set(language.rawValue, forKey: "interfaceLanguage")
+            notice = nil
+            languageChanged?()
+            refresh()
+        }
+    }
+    var languageChanged: (() -> Void)?
     let supported = FBVisibilitySession.isSupported()
     let ownID = Bundle.main.bundleIdentifier ?? "com.cmmuu.FoldBar"
     var editableIDs: Set<String> { Set(apps.filter(\.editable).map(\.id)) }
@@ -30,7 +40,10 @@ final class AppModel: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        let override = CommandLine.arguments.first { $0.hasPrefix("--language=") }?.components(separatedBy: "=").last
+        language = AppLanguage(rawValue: override ?? defaults.string(forKey: "interfaceLanguage") ?? "system") ?? .system
         state = ManagementState(applied: Set(defaults.stringArray(forKey: "foldedApplications") ?? []))
+        Localizer.select(language)
         let center = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification,
                      NSWorkspace.didWakeNotification, NSWorkspace.activeSpaceDidChangeNotification] {
@@ -65,7 +78,7 @@ final class AppModel: ObservableObject {
         state.stage(ids, folded: folded, editable: editableIDs)
         notice = nil
     }
-    func cancelDraft() { guard !isBusy else { return }; state.cancel(); notice = "已取消待应用修改" }
+    func cancelDraft() { guard !isBusy else { return }; state.cancel(); notice = L("已取消待应用修改") }
     func applyDraft() async {
         guard !unavailable, state.isDirty else { return }
         isBusy = true; errorMessage = nil
@@ -75,12 +88,12 @@ final class AppModel: ObservableObject {
             guard !shuttingDown else { return }
             state.acceptApply(); persist()
             temporarilyExpanded = false; isCollapsed = !state.applied.isEmpty
-            notice = "配置已应用"; try? await Task.sleep(nanoseconds: 450_000_000); await rescan()
+            notice = L("配置已应用"); try? await Task.sleep(nanoseconds: 450_000_000); await rescan()
         } catch { failOpen(error) }
     }
     func undo() async {
         guard !isBusy else { return }
-        if state.canUndoDraft { state.undoDraft(); notice = "已撤销上一步修改"; return }
+        if state.canUndoDraft { state.undoDraft(); notice = L("已撤销上一步修改"); return }
         guard !unavailable, !state.isDirty, let previous = state.previousApplied else { return }
         isBusy = true; errorMessage = nil
         defer { isBusy = false }
@@ -89,7 +102,7 @@ final class AppModel: ObservableObject {
             guard !shuttingDown else { return }
             state.acceptAppliedUndo(); persist()
             temporarilyExpanded = false; isCollapsed = !state.applied.isEmpty
-            notice = "已撤销上次应用"; try? await Task.sleep(nanoseconds: 450_000_000); await rescan()
+            notice = L("已撤销上次应用"); try? await Task.sleep(nanoseconds: 450_000_000); await rescan()
         } catch { failOpen(error) }
     }
     func setExpanded(_ expanded: Bool) async {
@@ -101,7 +114,7 @@ final class AppModel: ObservableObject {
             try await driver.apply(hidden: expanded ? [] : state.applied, ownID: ownID)
             temporarilyExpanded = expanded
             isCollapsed = !expanded && !state.applied.isEmpty
-            notice = expanded ? "临时展开中，已保存的配置未改变" : "已恢复折叠配置"
+            notice = expanded ? L("临时展开中，已保存的配置未改变") : L("已恢复折叠配置")
             try? await Task.sleep(nanoseconds: 450_000_000)
             await rescan()
         } catch { failOpen(error) }
@@ -112,14 +125,14 @@ final class AppModel: ObservableObject {
         driver.restore()
         temporarilyExpanded = true; isCollapsed = false
         let fixed = await NativeMenuAccess.fixControllerPosition(ownID: ownID)
-        notice = fixed ? "折栏入口已固定到右侧，可继续按配置折叠" : "请展开系统的 «，按住 ⌘ 将折栏箭头拖到右侧可见区"
+        notice = fixed ? L("折栏入口已固定到右侧，可继续按配置折叠") : L("请展开系统的 «，按住 ⌘ 将折栏箭头拖到右侧可见区")
         isBusy = false
         await rescan()
     }
     private func persist() { defaults.set(state.applied.sorted(), forKey: "foldedApplications") }
     private func failOpen(_ error: Error) {
         driver.restore(); temporarilyExpanded = true; isCollapsed = false
-        if !shuttingDown { errorMessage = error.localizedDescription }
+        if !shuttingDown { errorMessage = L(error.localizedDescription) }
     }
 
     func open(_ target: MenuTarget) {
@@ -136,7 +149,7 @@ final class AppModel: ObservableObject {
                 let baseline = MenuInventory.popupWindows(pid: target.pid)
                 let access = await NativeMenuAccess.open(target: target)
                 expandedOverflow = access.expandedOverflow
-                guard access.pressed else { throw menuError("这个图标暂时无法打开。可以先临时展开全部，再从菜单栏操作。") }
+                guard access.pressed else { throw menuError(L("这个图标暂时无法打开。可以先临时展开全部，再从菜单栏操作。")) }
                 var observed = false
                 var missingSamples = 0
                 // No time limit while a menu is actually open. Only bound the initial detection period.
@@ -147,7 +160,7 @@ final class AppModel: ObservableObject {
                     }.value
                     if open { observed = true; missingSamples = 0 }
                     else if observed { missingSamples += 1; if missingSamples >= 2 { break } }
-                    else if sample >= 24 { throw menuError("未检测到可交互菜单。请临时展开全部，从原图标操作。") }
+                    else if sample >= 24 { throw menuError(L("未检测到可交互菜单。请临时展开全部，从原图标操作。")) }
                 }
             } catch is CancellationError { }
             catch { if !shuttingDown { errorMessage = error.localizedDescription } }

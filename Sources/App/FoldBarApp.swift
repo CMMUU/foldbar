@@ -60,15 +60,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.button?.target = self
         statusItem.button?.action = #selector(statusClicked(_:))
         statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
-        statusItem.button?.setAccessibilityLabel("折栏图标浮窗")
-        statusItem.button?.toolTip = "折栏 · 点击打开图标浮窗 · 右键更多操作"
+        statusItem.button?.setAccessibilityLabel(L("折栏图标浮窗"))
+        statusItem.button?.toolTip = L("折栏 · 点击打开图标浮窗 · 右键更多操作")
         subscription = model.$isCollapsed.sink { [weak self] collapsed in
-            self?.statusItem.button?.image = NSImage(systemSymbolName: collapsed ? "chevron.up" : "chevron.down", accessibilityDescription: "折栏图标浮窗")
+            self?.statusItem.button?.image = BrandAssets.menuIcon()
         }
         entryTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
             Task { @MainActor in await self?.updateFallbackEntry() }
         }
+        model.languageChanged = { [weak self] in self?.updateLanguage() }
         showSettings()
+    }
+
+    private func updateLanguage() {
+        window?.title = L("折栏 FoldBar · 图标管理")
+        fallbackPanel?.title = L("折栏快捷入口")
+        statusItem.button?.setAccessibilityLabel(L("折栏图标浮窗"))
+        statusItem.button?.toolTip = L("折栏 · 点击打开图标浮窗 · 右键更多操作")
+        fallbackButton?.setAccessibilityLabel(L("折栏图标浮窗"))
+        fallbackButton?.toolTip = L("折栏 · 系统隐藏菜单栏入口时，在此打开图标浮窗")
     }
 
     private func updateFallbackEntry() async {
@@ -82,7 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if visible { fallbackPanel?.orderOut(nil); return }
         if fallbackPanel == nil {
             let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 34, height: 28), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-            panel.title = "折栏快捷入口"
+            panel.title = L("折栏快捷入口")
             panel.level = .statusBar
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
             panel.hidesOnDeactivate = false
@@ -91,14 +101,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             panel.backgroundColor = .clear
             panel.hasShadow = true
             let button = NSButton(frame: NSRect(x: 0, y: 0, width: 34, height: 28))
-            button.image = NSImage(systemSymbolName: "chevron.up", accessibilityDescription: "折栏图标浮窗")
+            button.image = BrandAssets.menuIcon()
             button.title = ""
             button.bezelStyle = .regularSquare
             button.wantsLayer = true
             button.layer?.cornerRadius = 8
             button.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
-            button.setAccessibilityLabel("折栏图标浮窗")
-            button.toolTip = "折栏 · 系统隐藏菜单栏入口时，在此打开图标浮窗"
+            button.setAccessibilityLabel(L("折栏图标浮窗"))
+            button.toolTip = L("折栏 · 系统隐藏菜单栏入口时，在此打开图标浮窗")
             button.target = self; button.action = #selector(statusClicked(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
             panel.contentView = button
@@ -114,10 +124,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func statusClicked(_ sender: NSButton) {
         if NSApp.currentEvent?.type == .rightMouseUp {
             let menu = NSMenu()
-            menu.addItem(withTitle: "管理全部图标…", action: #selector(showSettings), keyEquivalent: ",").target = self
-            menu.addItem(withTitle: model.temporarilyExpanded ? "恢复折叠配置" : "临时展开全部", action: #selector(toggleExpanded), keyEquivalent: "").target = self
+            menu.addItem(withTitle: L("管理全部图标…"), action: #selector(showSettings), keyEquivalent: ",").target = self
+            menu.addItem(withTitle: model.temporarilyExpanded ? L("恢复折叠配置") : L("临时展开全部"), action: #selector(toggleExpanded), keyEquivalent: "").target = self
             menu.addItem(.separator())
-            menu.addItem(withTitle: "退出折栏（恢复全部图标）", action: #selector(quit), keyEquivalent: "q").target = self
+            menu.addItem(withTitle: L("退出折栏（恢复全部图标）"), action: #selector(quit), keyEquivalent: "q").target = self
             menu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.minY), in: sender)
         } else {
             if popover?.isShown == true { popover?.performClose(nil); return }
@@ -138,7 +148,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover?.performClose(nil)
         if window == nil {
             let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 790, height: 710), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-            panel.title = "折栏 FoldBar · 图标管理"
+            panel.title = L("折栏 FoldBar · 图标管理")
             panel.contentView = NSHostingView(rootView: SettingsView(model: model))
             panel.minSize = NSSize(width: 740, height: 610)
             panel.isReleasedWhenClosed = false

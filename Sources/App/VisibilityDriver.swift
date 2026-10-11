@@ -41,7 +41,7 @@ final class VisibilityDriver {
                 guard let self, self.generation == current, let pending = self.pending else { return }
                 self.pending = nil; self.session?.restore(); self.session = nil
                 pending.resume(throwing: NSError(domain: "FoldBar", code: 1,
-                    userInfo: [NSLocalizedDescriptionKey: "系统没有及时响应，已临时展开。修改仍保留，可重新应用。 "]))
+                    userInfo: [NSLocalizedDescriptionKey: L("系统没有及时响应，已临时展开。修改仍保留，可重新应用。 ")]))
             }
         }
     }

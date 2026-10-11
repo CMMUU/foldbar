@@ -93,8 +93,8 @@ enum MenuInventory {
                 let id = systemID ?? "\(appID)#\(ordinal)"
                 let name: String
                 switch appID {
-                case "com.apple.TextInputMenuAgent": name = "输入法"
-                case "com.apple.WeatherMenu", "com.apple.weather.menu": name = "天气"
+                case "com.apple.TextInputMenuAgent": name = L("输入法")
+                case "com.apple.WeatherMenu", "com.apple.weather.menu": name = L("天气")
                 default: name = owner?.localizedName ?? label
                 }
                 let rect = frame(group) ?? frame(element)

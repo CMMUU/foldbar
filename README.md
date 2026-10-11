@@ -1,65 +1,50 @@
+<p align="center"><img src="Resources/FoldBar.png" width="112" alt="FoldBar 折页 F"></p>
+
 # 折栏 FoldBar
 
-macOS 27 原生菜单栏管理器，当前版本 **0.2.0 本机开发预览**。提供图标浮窗、完整管理窗口，以及单个、部分、全部应用的折叠配置。使用 Swift、SwiftUI、AppKit 和 Objective-C 运行时桥接实现；Bartender 7 是功能参考。
+[English](README.en.md) · [官网](https://foldbar.cmmuu.com) · [下载安装包](https://downloads.cmmuu.com/download/foldbar/latest/macos-arm64) · [GitHub 发行](https://github.com/CMMUU/foldbar/releases/latest)
 
-项目源码位于 `/opt/workspace/projects/foldbar`。需求、方案和验收记录统一维护在 [project-docs 的 FoldBar 目录](https://github.com/CMMUU/project-docs/tree/main/foldbar)。
+让菜单栏回归清爽。FoldBar 是为 **macOS 27 / Apple Silicon** 编写的原生菜单栏管理器：收起不常用的应用图标，需要时打开浮窗，也可以进入完整管理窗口。
+
+当前版本 **0.3.0**，属于早期预览。正式下载附件使用 Developer ID 签名并经 Apple 公证。
 
 ## 使用
 
-1. 打开 FoldBar，在系统设置中授予辅助功能权限，回到窗口点击“重新检测”。
-2. 在管理窗口搜索或筛选应用，勾选单个、多个，或“全选当前结果”。设置为“常驻”或“折叠”，点击“应用”生效。
-3. 点击菜单栏箭头打开浮窗，默认显示折叠应用，可以切换全部、搜索、打开原菜单，或进入“管理全部”。
-4. 修改可以取消、逐步撤销；应用后可以撤销上一次应用。浮窗和管理窗口共用配置与草稿。
-5. “临时展开全部”不更改保存的选择。打开应用原菜单时会临时展开，菜单关闭后恢复折叠配置。
+1. 打开 DMG，把 FoldBar 拖入“应用程序”，然后启动。
+2. 在系统设置中为 FoldBar 开启“辅助功能”，回到应用点击“重新检测”。
+3. 选中一个、多个或当前结果中的全部应用，设为“常驻”或“折叠”，点击“应用”。系统项只读。
+4. 点击菜单栏 **F** 打开浮窗，可切换“折叠 / 全部”、搜索、打开原菜单，或进入“管理全部”。
+5. 在窗口右上角选择“跟随系统 / 简体中文 / English”，即时切换界面。
 
-macOS 27 的折叠机制有时也会隐藏 FoldBar 自己的原生入口；此时右上角菜单栏下方会出现独立的备用箭头。重新打开 app 也可以找回管理窗口。右键箭头可管理全部、临时展开或退出；退出会释放折叠会话。
+修改支持取消和撤销；应用后也可撤销上一次配置。“临时展开全部”不修改保存的选择。打开原菜单时暂时展开，菜单关闭后恢复。设置保存在本机，不收集遥测，无需录屏权限。
 
-## 构建
+系统有时会连同 FoldBar 的菜单栏入口一起隐藏；此时右上角下方会出现独立的备用 **F** 按钮。重新打开应用也能找回管理窗口。右键 F 可管理全部、临时展开或退出，退出会释放折叠会话。
 
-需要 Apple Silicon Mac、macOS 27 和 Xcode。脚本默认产生临时签名的 arm64 构建：
+## 当前边界
+
+- 管理粒度为应用，同一应用的多个菜单栏图标一起折叠；打开菜单时可选择识别出的具体图标。
+- 使用 macOS 27 私有菜单栏接口，其他系统主版本不支持，未来系统更新可能影响兼容性。
+- 系统项不参与配置；媒体等系统附加项可能受折叠影响，展开后恢复。
+- 浮窗使用应用图标，不是菜单栏动态图标的实时镜像。
+- 主屏流程已做预览验证；多屏、全屏和长期运行仍需进一步测试。
+- 暂不提供自定义排序、登录启动、全局快捷键、条件规则、自动更新。
+
+## 构建与测试
+
+应用需要 Apple Silicon、macOS 27 和对应 Xcode SDK，使用 Swift、SwiftUI、AppKit 与小型 Objective-C 运行时桥接。无第三方应用依赖。
 
 ```sh
+swift test
 bash scripts/build.sh
 open build/FoldBar.app
 ```
 
-可使用本机已有的 Developer ID 身份签名：
+脚本默认使用临时签名。可通过 `FOLDBAR_SIGN_IDENTITY` 指定自己的 Developer ID 身份；签名密钥和公证凭据不在仓库中。改变签名身份或安装位置可能需要重新授予辅助功能权限。
 
-```sh
-FOLDBAR_SIGN_IDENTITY='Developer ID Application: …' bash scripts/build.sh build/release
-```
+核心测试覆盖批量范围、系统项只读、取消/撤销、应用历史和语言选择。`--ui-test` 使用独立偏好域；`--fixture` 创建测试菜单图标；`--smoke-test` 仅针对独立 `com.cmmuu.FoldBar.Fixture`，测试进程也需辅助功能权限。
 
-0.2.0 交付包已使用 Developer ID 签名并通过严格校验，尚未 Apple 公证或公开发布。切换签名身份后，macOS 可能要求重新授予辅助功能权限。
+## 反馈与参考
 
-## 行为与边界
+通过 [Issues](https://github.com/CMMUU/foldbar/issues) 报告问题，请附系统版本、芯片类型及复现步骤，避免提交私人菜单内容。
 
-- 配置粒度为应用；同一应用的多个菜单栏图标一起折叠。打开菜单时可以选择已识别的具体图标。
-- 全选只作用于当前搜索和筛选结果中的可编辑应用。系统项列出但不参与折叠配置。
-- 重启会尝试恢复保存的配置；应用启停、唤醒和 Space 变化后刷新并重新应用。接口失败时释放折叠并保留草稿。
-- 使用 macOS 27 私有菜单栏接口，不支持其他系统主版本。系统媒体等附加项可能在折叠期间消失，展开后恢复。
-- 浮窗显示应用图标，不是菜单栏动态图标的像素镜像。打开原菜单需要辅助功能权限。
-- 已实现主屏定位；多屏、全屏、长期运行及后续系统版本兼容性仍需专项验收。
-- 不需要录屏权限，没有网络功能，不直接写系统菜单栏偏好文件。“固定入口”通过系统支持的 ⌘ 拖动移动自己的图标。
-- 尚无自定义图标排序、登录启动、全局热键、条件规则、自动更新；不是 Bartender 7 的全功能等价替代。
-
-## 验证
-
-```sh
-swift test
-codesign --verify --strict build/FoldBar.app
-```
-
-10 项核心测试通过，覆盖可见性策略、批量修改范围、只读排除、取消、撤销和应用历史。预览构建在本机验证了：搜索与选择、暂存/取消/应用/撤销、独立备用入口、浮窗、原菜单打开、菜单关闭后再次折叠，并确认真实用户配置未被隔离 UI 测试改写。
-
-最终签名构建的运行权限与验收状态见 [0.2.0 验收记录](https://github.com/CMMUU/project-docs/blob/main/foldbar/完整交互方案与验收-2026-10-11.md)。
-
-开发测试入口：`--ui-test` 使用独立偏好域；`--smoke-test` 返回真实成功/失败退出码，只针对独立 `com.cmmuu.FoldBar.Fixture` 测试应用。必须先启动带 `--fixture` 参数或 `FoldBarTestFixture=true` 元数据的独立测试 app；测试进程自身也需要辅助功能权限。
-
-## 技术参考
-
-- [Apple NSStatusBar](https://developer.apple.com/documentation/appkit/nsstatusbar)
-- [Bartender 7](https://www.macbartender.com/)
-- [Thaw 架构](https://github.com/thaw-app/Thaw/blob/development/docs/ARCHITECTURE.md)
-- [Pelmet 对 macOS 27 机制的说明](https://github.com/fif7y/pelmet#how-it-works)
-
-本项目独立编写，没有引入这些开源应用作为依赖或复制其应用实现。
+功能参考 [Bartender](https://www.macbartender.com/)，技术调研参考 [NSStatusBar](https://developer.apple.com/documentation/appkit/nsstatusbar)、[Thaw 架构](https://github.com/thaw-app/Thaw/blob/development/docs/ARCHITECTURE.md) 与 [Pelmet](https://github.com/fif7y/pelmet)。本项目独立实现，与这些产品无隶属关系。
